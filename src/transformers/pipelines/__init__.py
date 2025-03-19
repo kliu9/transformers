@@ -933,7 +933,7 @@ def pipeline(
             config = AutoConfig.from_pretrained(model, _from_pipeline=task, **hub_kwargs, **model_kwargs)
             hub_kwargs["_commit_hash"] = config._commit_hash
     time8 = time.time()
-    logger.info(f'[TRANSFORMERS TIME] retreive task + get default model / version information {time8 - time6 :3f} seconds')
+    logger.info(f'[TRANSFORMERS TIME] retrieve task + get default model / version information {time8 - time6 :3f} seconds')
 
     if device_map is not None:
         if "device_map" in model_kwargs:
@@ -959,6 +959,7 @@ def pipeline(
 
     model_name = model if isinstance(model, str) else None
 
+    time99 = time.time()
     # Load the correct model if possible
     # Infer the framework from the model if not already defined
     if isinstance(model, str) or framework is None:
@@ -974,7 +975,7 @@ def pipeline(
         )
     
     time100 = time.time()
-    logger.info(f'[TRANSFORMERS TIME] infer framework from model {time100 - time8 :3f} seconds')
+    logger.info(f'[TRANSFORMERS TIME] infer framework from model {time100 - time99 :3f} seconds')
 
     model_config = model.config
     hub_kwargs["_commit_hash"] = model.config._commit_hash

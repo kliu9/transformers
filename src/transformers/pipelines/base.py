@@ -54,6 +54,7 @@ from ..utils import (
     logging,
 )
 
+import time
 
 GenericTensor = Union[List["GenericTensor"], "torch.Tensor", "tf.Tensor"]
 
@@ -238,6 +239,7 @@ def infer_framework_load_model(
     Returns:
         `Tuple`: A tuple framework, model.
     """
+    time1 = time.time()
     if not is_tf_available() and not is_torch_available():
         raise RuntimeError(
             "At least one of TensorFlow 2.0 or PyTorch should be installed. "
@@ -257,7 +259,10 @@ def infer_framework_load_model(
         if config.architectures:
             classes = []
             for architecture in config.architectures:
+                time2 = time.time()
                 transformers_module = importlib.import_module("transformers")
+                time3 = time.time()
+                logger.info(f'[TRANSFORMERS TIME] import transformers within infer_framework_load_model {time3 - time2 :3f} seconds')
                 if look_pt:
                     _class = getattr(transformers_module, architecture, None)
                     if _class is not None:
@@ -267,6 +272,8 @@ def infer_framework_load_model(
                     if _class is not None:
                         classes.append(_class)
             class_tuple = class_tuple + tuple(classes)
+        time4 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] total first if statement infer_framework_load_model {time4 - time1 :3f} seconds')
 
         if len(class_tuple) == 0:
             raise ValueError(f"Pipeline cannot infer suitable model classes from {model}")
@@ -296,6 +303,8 @@ def infer_framework_load_model(
             except (OSError, ValueError):
                 all_traceback[model_class.__name__] = traceback.format_exc()
                 continue
+        time5 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] load model from pretrained {time5 - time4 :3f} seconds')
 
         if isinstance(model, str):
             error = ""
