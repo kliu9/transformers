@@ -303,8 +303,8 @@ def infer_framework_load_model(
             except (OSError, ValueError):
                 all_traceback[model_class.__name__] = traceback.format_exc()
                 continue
-        time5 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] load model from pretrained {time5 - time4 :3f} seconds')
+            time5 = time.time()
+            logger.info(f'[TRANSFORMERS TIME] load model {model_class} from pretrained {time5 - time4 :3f} seconds')
 
         if isinstance(model, str):
             error = ""

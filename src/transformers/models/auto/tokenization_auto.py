@@ -43,7 +43,7 @@ from .configuration_auto import (
     model_type_to_module_name,
     replace_list_option_in_docstrings,
 )
-
+import time
 
 if is_tokenizers_available():
     from ...tokenization_utils_fast import PreTrainedTokenizerFast
@@ -843,6 +843,7 @@ class AutoTokenizer:
         >>> # Download vocabulary from huggingface.co and define model-specific arguments
         >>> tokenizer = AutoTokenizer.from_pretrained("FacebookAI/roberta-base", add_prefix_space=True)
         ```"""
+        time1 = time.time()
         use_auth_token = kwargs.pop("use_auth_token", None)
         if use_auth_token is not None:
             warnings.warn(
@@ -892,6 +893,7 @@ class AutoTokenizer:
 
             return tokenizer_class.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
 
+        time2 = time.time()
         # Next, let's try to use the tokenizer_config file to get the tokenizer class.
         tokenizer_config = get_tokenizer_config(pretrained_model_name_or_path, **kwargs)
         if "_commit_hash" in tokenizer_config:
@@ -904,6 +906,8 @@ class AutoTokenizer:
                 tokenizer_auto_map = tokenizer_config["auto_map"]
             else:
                 tokenizer_auto_map = tokenizer_config["auto_map"].get("AutoTokenizer", None)
+        time3 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] get tokenizer_config file {time3 - time2 :3f} seconds')
 
         # If that did not work, let's try to use the config.
         if config_tokenizer_class is None:
@@ -957,6 +961,9 @@ class AutoTokenizer:
                     f"Tokenizer class {tokenizer_class_candidate} does not exist or is not currently imported."
                 )
             return tokenizer_class.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
+
+        time4 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] load tokenizer from pretrained {time4 - time3 :3f} seconds')
 
         # Otherwise we have to be creative.
         # if model is an encoder decoder, the encoder tokenizer class is used by default
