@@ -146,9 +146,11 @@ if TYPE_CHECKING:
     from ..modeling_utils import PreTrainedModel
     from ..tokenization_utils_fast import PreTrainedTokenizerFast
 
+from transformers.utils import logging
 
+logging.set_verbosity_info()
 logger = logging.get_logger(__name__)
-
+logger.info("SET LOGGING LEVEL TO INFO!")
 
 # Register all the supported tasks here
 TASK_ALIASES = {
