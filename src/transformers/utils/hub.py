@@ -353,11 +353,6 @@ def cached_files(
     model_weights_file = cached_file("google-bert/bert-base-uncased", "pytorch_model.bin")
     ```
     """
-    if path_or_repo_id not in CACHED_FILES_CALLS:
-        CACHED_FILES_CALLS[path_or_repo_id] = 0
-    CACHED_FILES_CALLS[path_or_repo_id] += 1
-    logger.info(f'[TRANSFORMERS] CACHED_FILES_CALLS: {CACHED_FILES_CALLS}')
-    
     time1 = time.time()
     use_auth_token = deprecated_kwargs.pop("use_auth_token", None)
     if use_auth_token is not None:
@@ -407,6 +402,10 @@ def cached_files(
     file_counter = 0
     if _commit_hash is not None and not force_download:
         for filename in full_filenames:
+            if filename not in CACHED_FILES_CALLS:
+                CACHED_FILES_CALLS[filename] = 0
+            CACHED_FILES_CALLS[filename] += 1
+            logger.info(f'[TRANSFORMERS] CACHED_FILES_CALLS: {CACHED_FILES_CALLS}')
             # If the file is cached under that commit hash, we return it directly.
             resolved_file = try_to_load_from_cache(
                 path_or_repo_id, filename, cache_dir=cache_dir, revision=_commit_hash, repo_type=repo_type
@@ -533,7 +532,7 @@ def cached_files(
     resolved_files = None if len(resolved_files) == 0 else resolved_files
 
     time2 = time.time()
-    logger.info(f'[TRANSFORMERS TIME] cached_files call # {CACHED_FILES_CALLS[path_or_repo_id]} took {time2 - time1 :3f} seconds')
+    logger.info(f'[TRANSFORMERS TIME] cached_files function run took {time2 - time1 :3f} seconds')
     return resolved_files
 
 
