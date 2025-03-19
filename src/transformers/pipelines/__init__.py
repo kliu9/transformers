@@ -150,6 +150,7 @@ if TYPE_CHECKING:
 from transformers.utils import logging
 
 logging.set_verbosity_info()
+logging.enable_explicit_format()
 logger = logging.get_logger(__name__)
 logger.info("SET LOGGING LEVEL TO INFO!")
 
@@ -914,8 +915,8 @@ def pipeline(
         normalized_task, targeted_task, task_options = check_task(task)
         if pipeline_class is None:
             pipeline_class = targeted_task["impl"]
-    time7 = time.time()
-    logger.info(f'[TRANSFORMERS TIME] retrive task  {time7 - time6 :3f} seconds')
+    # time7 = time.time()
+    # logger.info(f'[TRANSFORMERS TIME] retrieve task  {time7 - time6 :3f} seconds')
 
     # Use default model/config/tokenizer for the task if no model is provided
     if model is None:
@@ -932,7 +933,7 @@ def pipeline(
             config = AutoConfig.from_pretrained(model, _from_pipeline=task, **hub_kwargs, **model_kwargs)
             hub_kwargs["_commit_hash"] = config._commit_hash
     time8 = time.time()
-    logger.info(f'[TRANSFORMERS TIME] get default model, config, tokenizer configs {time8 - time7 :3f} seconds')
+    logger.info(f'[TRANSFORMERS TIME] retreive task + get default model / version information {time8 - time6 :3f} seconds')
 
     if device_map is not None:
         if "device_map" in model_kwargs:
@@ -971,6 +972,9 @@ def pipeline(
             **hub_kwargs,
             **model_kwargs,
         )
+    
+    time100 = time.time()
+    logger.info(f'[TRANSFORMERS TIME] infer framework from model {time100 - time8 :3f} seconds')
 
     model_config = model.config
     hub_kwargs["_commit_hash"] = model.config._commit_hash
@@ -1043,7 +1047,7 @@ def pipeline(
     if task in NO_IMAGE_PROCESSOR_TASKS:
         load_image_processor = False
     time9 = time.time()
-    logger.info(f'[TRANSFORMERS TIME] figure out whether to load each element {time9 - time8 :3f} seconds')
+    logger.info(f'[TRANSFORMERS TIME] figure out whether to load each element {time9 - time100 :3f} seconds')
 
     if load_tokenizer:
         # Try to infer tokenizer from model or config name (if provided as str)
