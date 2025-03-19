@@ -91,6 +91,7 @@ from .zero_shot_classification import ZeroShotClassificationArgumentHandler, Zer
 from .zero_shot_image_classification import ZeroShotImageClassificationPipeline
 from .zero_shot_object_detection import ZeroShotObjectDetectionPipeline
 
+import time
 
 if is_tf_available():
     import tensorflow as tf
@@ -757,6 +758,7 @@ def pipeline(
     >>> recognizer = pipeline("ner", model=model, tokenizer=tokenizer)
     ```"""
     logger.info("KATIE ADDED THIS PRINT STATEMENT")
+    time1 = time.time()
     if model_kwargs is None:
         model_kwargs = {}
     # Make sure we only pass use_auth_token once as a kwarg (it used to be possible to pass it in model_kwargs,
@@ -803,6 +805,9 @@ def pipeline(
     if isinstance(model, Path):
         model = str(model)
 
+    time2 = time.time()
+    logger.info(f'[TRANSFORMERS TIME] kwargs stuff and checking if required args are passed in: {time2 - time1 :3f} seconds')
+
     if commit_hash is None:
         pretrained_model_name_or_path = None
         if isinstance(config, str):
@@ -825,16 +830,24 @@ def pipeline(
         else:
             hub_kwargs["_commit_hash"] = getattr(config, "_commit_hash", None)
 
+    time3 = time.time()
+    logger.info(f'[TRANSFORMERS TIME] call to cached config file {time3 - time2 :3f} seconds')
+    logger.info(f'config is {config}')
+
     # Config is the primordial information item.
     # Instantiate config if needed
     adapter_path = None
     if isinstance(config, str):
+        time4 = time.time()
         config = AutoConfig.from_pretrained(
             config, _from_pipeline=task, code_revision=code_revision, **hub_kwargs, **model_kwargs
         )
         hub_kwargs["_commit_hash"] = config._commit_hash
+        time5 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] extracting config from pretrained {time5 - time4 :3f} seconds')
     elif config is None and isinstance(model, str):
         # Check for an adapter file in the model path if PEFT is available
+        time4 = time.time()
         if is_peft_available():
             # `find_adapter_config_file` doesn't accept `trust_remote_code`
             _hub_kwargs = {k: v for k, v in hub_kwargs.items() if k != "trust_remote_code"}
@@ -855,7 +868,9 @@ def pipeline(
             model, _from_pipeline=task, code_revision=code_revision, **hub_kwargs, **model_kwargs
         )
         hub_kwargs["_commit_hash"] = config._commit_hash
-
+        time5 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] extracting config from pretrained {time5 - time4 :3f} seconds')
+    
     custom_tasks = {}
     if config is not None and len(getattr(config, "custom_pipelines", {})) > 0:
         custom_tasks = config.custom_pipelines
@@ -867,7 +882,8 @@ def pipeline(
                     "We can't infer the task automatically for this model as there are multiple tasks available. Pick "
                     f"one in {', '.join(custom_tasks.keys())}"
                 )
-
+    
+    time6 = time.time()
     if task is None and model is not None:
         if not isinstance(model, str):
             raise RuntimeError(
@@ -898,6 +914,8 @@ def pipeline(
         normalized_task, targeted_task, task_options = check_task(task)
         if pipeline_class is None:
             pipeline_class = targeted_task["impl"]
+    time7 = time.time()
+    logger.info(f'[TRANSFORMERS TIME] retrive task  {time7 - time6 :3f} seconds')
 
     # Use default model/config/tokenizer for the task if no model is provided
     if model is None:
@@ -913,6 +931,8 @@ def pipeline(
         if config is None and isinstance(model, str):
             config = AutoConfig.from_pretrained(model, _from_pipeline=task, **hub_kwargs, **model_kwargs)
             hub_kwargs["_commit_hash"] = config._commit_hash
+    time8 = time.time()
+    logger.info(f'[TRANSFORMERS TIME] get default model, config, tokenizer configs {time8 - time7 :3f} seconds')
 
     if device_map is not None:
         if "device_map" in model_kwargs:
@@ -1022,6 +1042,8 @@ def pipeline(
         load_feature_extractor = False
     if task in NO_IMAGE_PROCESSOR_TASKS:
         load_image_processor = False
+    time9 = time.time()
+    logger.info(f'[TRANSFORMERS TIME] figure out whether to load each element {time9 - time8 :3f} seconds')
 
     if load_tokenizer:
         # Try to infer tokenizer from model or config name (if provided as str)
@@ -1052,6 +1074,8 @@ def pipeline(
             tokenizer = AutoTokenizer.from_pretrained(
                 tokenizer_identifier, use_fast=use_fast, _from_pipeline=task, **hub_kwargs, **tokenizer_kwargs
             )
+    time10 = time.time()
+    logger.info(f'[TRANSFORMERS TIME] taken to load tokenizer {time10 - time9 :3f} seconds')
 
     if load_image_processor:
         # Try to infer image processor from model or config name (if provided as str)
@@ -1077,6 +1101,8 @@ def pipeline(
             image_processor = AutoImageProcessor.from_pretrained(
                 image_processor, _from_pipeline=task, **hub_kwargs, **model_kwargs
             )
+    time11 = time.time()
+    logger.info(f'[TRANSFORMERS TIME] taken to load image processor {time11 - time10 :3f} seconds')
 
     if load_feature_extractor:
         # Try to infer feature extractor from model or config name (if provided as str)
@@ -1127,6 +1153,9 @@ def pipeline(
                     if not is_pyctcdecode_available():
                         logger.warning("Try to install `pyctcdecode`: `pip install pyctcdecode")
 
+    time12 = time.time()
+    logger.info(f'[TRANSFORMERS TIME] taken to load feature extractor {time12 - time11 :3f} seconds')
+
     if load_processor:
         # Try to infer processor from model or config name (if provided as str)
         if processor is None:
@@ -1151,6 +1180,8 @@ def pipeline(
                     f"Got type `{type(processor)}` instead. Please check that you specified "
                     "correct pipeline task for the model and model has processor implemented and saved."
                 )
+    time13 = time.time()
+    logger.info(f'[TRANSFORMERS TIME] taken to load processor {time13 - time12 :3f} seconds')
 
     if task == "translation" and model.config.task_specific_params:
         for key in model.config.task_specific_params:
@@ -1180,4 +1211,6 @@ def pipeline(
     if processor is not None:
         kwargs["processor"] = processor
 
+    end_time = time.time()
+    logger.info(f'[TRANSFORMERS TIME] total pipeline initialization {end_time - time1 :3f} seconds')
     return pipeline_class(model=model, framework=framework, task=task, **kwargs)
