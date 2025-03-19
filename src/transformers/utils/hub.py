@@ -422,7 +422,7 @@ def cached_files(
     # Either all the files were found, or some were _CACHED_NO_EXIST but we do not raise for missing entries
     if file_counter == len(full_filenames):
         time2 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] cached_files function run for {resolved_files} took {time2 - time1 :3f} seconds -- didnt download any files')
+        logger.info(f'[TRANSFORMERS TIME] cached_files function run for {full_filenames} took {time2 - time1 :3f} seconds -- didnt download any files')
         return existing_files if len(existing_files) > 0 else None
 
     user_agent = http_user_agent(user_agent)
