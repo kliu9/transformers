@@ -960,10 +960,10 @@ class AutoTokenizer:
                 raise ValueError(
                     f"Tokenizer class {tokenizer_class_candidate} does not exist or is not currently imported."
                 )
-            return tokenizer_class.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
-
-        time4 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] load tokenizer from pretrained {time4 - time3 :3f} seconds')
+            to_return = tokenizer_class.from_pretrained(pretrained_model_name_or_path, *inputs, **kwargs)
+            time4 = time.time()
+            logger.info(f'[TRANSFORMERS TIME] load tokenizer from pretrained {time4 - time3 :3f} seconds')
+            return to_return
 
         # Otherwise we have to be creative.
         # if model is an encoder decoder, the encoder tokenizer class is used by default

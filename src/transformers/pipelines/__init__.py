@@ -933,7 +933,7 @@ def pipeline(
             config = AutoConfig.from_pretrained(model, _from_pipeline=task, **hub_kwargs, **model_kwargs)
             hub_kwargs["_commit_hash"] = config._commit_hash
     time8 = time.time()
-    logger.info(f'[TRANSFORMERS TIME] retrieve task + get default model / version information {time8 - time6 :3f} seconds')
+    logger.info(f'[TRANSFORMERS TIME] retrieve task pipeline_class {pipeline_class} + get default model / version information {time8 - time6 :3f} seconds')
 
     if device_map is not None:
         if "device_map" in model_kwargs:
