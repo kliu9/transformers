@@ -16,6 +16,8 @@ if is_torch_available():
 
 logger = logging.get_logger(__name__)
 
+import time
+
 
 class ReturnType(enum.Enum):
     TENSORS = 0
@@ -64,6 +66,7 @@ class Text2TextGenerationPipeline(Pipeline):
     return_name = "generated"
 
     def __init__(self, *args, **kwargs):
+        time1 = time.time()
         super().__init__(*args, **kwargs)
 
         self.check_model_type(
@@ -71,6 +74,8 @@ class Text2TextGenerationPipeline(Pipeline):
             if self.framework == "tf"
             else MODEL_FOR_SEQ_TO_SEQ_CAUSAL_LM_MAPPING_NAMES
         )
+        time2 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] taken to initialize Text2TextGenerationPipeline {time2 - time1} seconds')
 
     def _sanitize_parameters(
         self,
@@ -169,8 +174,10 @@ class Text2TextGenerationPipeline(Pipeline):
             - **generated_token_ids** (`torch.Tensor` or `tf.Tensor`, present when `return_tensors=True`) -- The token
               ids of the generated text.
         """
-
+        time1 = time.time()
         result = super().__call__(*args, **kwargs)
+        time2 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] taken to call Text2TextGenerationPipeline {time2 - time1} seconds')
         if (
             isinstance(args[0], list)
             and all(isinstance(el, str) for el in args[0])
