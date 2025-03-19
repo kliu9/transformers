@@ -70,6 +70,7 @@ from .import_utils import (
     is_training_run_on_sagemaker,
 )
 
+import time
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -357,6 +358,7 @@ def cached_files(
     CACHED_FILES_CALLS[path_or_repo_id] += 1
     logger.info(f'[TRANSFORMERS] CACHED_FILES_CALLS: {CACHED_FILES_CALLS}')
     
+    time1 = time.time()
     use_auth_token = deprecated_kwargs.pop("use_auth_token", None)
     if use_auth_token is not None:
         warnings.warn(
@@ -530,6 +532,8 @@ def cached_files(
     # Return `None` if the list is empty, coherent with other Exception when the flag is not active
     resolved_files = None if len(resolved_files) == 0 else resolved_files
 
+    time2 = time.time()
+    logger.info(f'[TRANSFORMERS TIME] cached_files call # {CACHED_FILES_CALLS[path_or_repo_id]} took {time2 - time1 :3f} seconds')
     return resolved_files
 
 
