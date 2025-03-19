@@ -532,7 +532,7 @@ def cached_files(
     resolved_files = None if len(resolved_files) == 0 else resolved_files
 
     time2 = time.time()
-    logger.info(f'[TRANSFORMERS TIME] cached_files function run took {time2 - time1 :3f} seconds')
+    logger.info(f'[TRANSFORMERS TIME] cached_files function run for {resolved_files} took {time2 - time1 :3f} seconds')
     return resolved_files
 
 
