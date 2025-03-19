@@ -39,6 +39,7 @@ from .configuration_auto import AutoConfig, model_type_to_module_name, replace_l
 if is_torch_available():
     from ...generation import GenerationMixin
 
+import time
 
 logger = logging.get_logger(__name__)
 
@@ -446,6 +447,7 @@ class _BaseAutoModelClass:
 
     @classmethod
     def from_pretrained(cls, pretrained_model_name_or_path, *model_args, **kwargs):
+        time1 = time.time()
         config = kwargs.pop("config", None)
         trust_remote_code = kwargs.pop("trust_remote_code", None)
         kwargs["_from_auto"] = True

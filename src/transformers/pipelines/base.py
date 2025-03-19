@@ -1281,11 +1281,21 @@ class Pipeline(_ScikitCompat, PushToHubMixin):
                 model_inputs["training"] = False
                 model_outputs = self._forward(model_inputs, **forward_params)
             elif self.framework == "pt":
+                time1 = time.time()
                 inference_context = self.get_inference_context()
+                time2 = time.time()
+                logger.info(f'[TRANSFORMERS TIME] in forward, get inference context {time2 - time1 :3f} seconds')
+
                 with inference_context():
                     model_inputs = self._ensure_tensor_on_device(model_inputs, device=self.device)
+                    time3 = time.time()
+                    logger.info(f'[TRANSFORMERS TIME] in forward, ensure tensor on device {time3 - time2 :3f} seconds')
                     model_outputs = self._forward(model_inputs, **forward_params)
+                    time4 = time.time()
+                    logger.info(f'[TRANSFORMERS TIME] in forward, self._forward {time4 - time3 :3f} seconds')
                     model_outputs = self._ensure_tensor_on_device(model_outputs, device=torch.device("cpu"))
+                    time5 = time.time()
+                    logger.info(f'[TRANSFORMERS TIME] in forward, ensure tensor on device again {time5 - time4 :3f} seconds')
             else:
                 raise ValueError(f"Framework {self.framework} is not supported")
         return model_outputs

@@ -267,6 +267,7 @@ def cached_file(
     file = file[0] if file is not None else file
     return file
 
+CACHED_FILES_CALLS = {}
 
 def cached_files(
     path_or_repo_id: Union[str, os.PathLike],
@@ -351,6 +352,11 @@ def cached_files(
     model_weights_file = cached_file("google-bert/bert-base-uncased", "pytorch_model.bin")
     ```
     """
+    if path_or_repo_id not in CACHED_FILES_CALLS:
+        CACHED_FILES_CALLS[path_or_repo_id] = 0
+    CACHED_FILES_CALLS[path_or_repo_id] += 1
+    logger.info(f'[TRANSFORMERS] CACHED_FILES_CALLS: {CACHED_FILES_CALLS}')
+    
     use_auth_token = deprecated_kwargs.pop("use_auth_token", None)
     if use_auth_token is not None:
         warnings.warn(
