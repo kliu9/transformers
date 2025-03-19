@@ -177,7 +177,7 @@ class Text2TextGenerationPipeline(Pipeline):
         time1 = time.time()
         result = super().__call__(*args, **kwargs)
         time2 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] taken to call Text2TextGenerationPipeline {time2 - time1} seconds')
+        logger.info(f'[TRANSFORMERS TIME] taken to call Text2TextGenerationPipeline {time2 - time1 :3f} seconds')
         if (
             isinstance(args[0], list)
             and all(isinstance(el, str) for el in args[0])

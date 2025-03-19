@@ -1333,7 +1333,7 @@ class Pipeline(_ScikitCompat, PushToHubMixin):
         time1 = time.time()
         preprocess_params, forward_params, postprocess_params = self._sanitize_parameters(**kwargs)
         time2 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] sanitize parameters {time2 - time1} seconds')
+        logger.info(f'[TRANSFORMERS TIME] sanitize parameters {time2 - time1 :3f} seconds')
 
         # Fuse __init__ params and __call__ params without modifying the __init__ ones.
         preprocess_params = {**self._preprocess_params, **preprocess_params}
@@ -1358,7 +1358,6 @@ class Pipeline(_ScikitCompat, PushToHubMixin):
 
         time3 = time.time()
         if is_list:
-            logger.info('case 1')
             if can_use_iterator:
                 final_iterator = self.get_iterator(
                     inputs, num_workers, batch_size, preprocess_params, forward_params, postprocess_params
@@ -1368,15 +1367,12 @@ class Pipeline(_ScikitCompat, PushToHubMixin):
             else:
                 return self.run_multi(inputs, preprocess_params, forward_params, postprocess_params)
         elif can_use_iterator:
-            logger.info('case 2')
             return self.get_iterator(
                 inputs, num_workers, batch_size, preprocess_params, forward_params, postprocess_params
             )
         elif is_iterable:
-            logger.info('case 3')
             return self.iterate(inputs, preprocess_params, forward_params, postprocess_params)
         elif self.framework == "pt" and isinstance(self, ChunkPipeline):
-            logger.info('case 4')
             return next(
                 iter(
                     self.get_iterator(
@@ -1385,19 +1381,25 @@ class Pipeline(_ScikitCompat, PushToHubMixin):
                 )
             )
         else:
-            logger.info('case 5')
             outputs = self.run_single(inputs, preprocess_params, forward_params, postprocess_params)
             time4 = time.time()
-            logger.info(f'[TRANSFORMERS TIME] to process inputs {time4 - time3} seconds')
+            logger.info(f'[TRANSFORMERS TIME] total pipeline __call__ time {time4 - time3 :3f} seconds')
             return outputs
 
     def run_multi(self, inputs, preprocess_params, forward_params, postprocess_params):
         return [self.run_single(item, preprocess_params, forward_params, postprocess_params) for item in inputs]
 
     def run_single(self, inputs, preprocess_params, forward_params, postprocess_params):
+        time1 = time.time()
         model_inputs = self.preprocess(inputs, **preprocess_params)
+        time2 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] preprocess time {time2 - time1 :3f} seconds')
         model_outputs = self.forward(model_inputs, **forward_params)
+        time3 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] forward time {time3 - time2 :3f} seconds')
         outputs = self.postprocess(model_outputs, **postprocess_params)
+        time4 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] postprocess time {time4 - time3 :3f} seconds')
         return outputs
 
     def iterate(self, inputs, preprocess_params, forward_params, postprocess_params):
