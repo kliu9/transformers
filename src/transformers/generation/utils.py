@@ -2276,9 +2276,6 @@ class GenerationMixin:
                 model_kwargs=model_kwargs,
             )
 
-            time8 = time.time()
-            logger.info(f'[TRANSFORMERS TIME] GenerationMixin, generate get candidate generator took {time8 - time7 :3f} seconds')
-
             # 12. run assisted generate
             result = self._assisted_decoding(
                 input_ids,
@@ -2290,9 +2287,6 @@ class GenerationMixin:
                 streamer=streamer,
                 **model_kwargs,
             )
-
-            time9 = time.time()
-            logger.info(f'[TRANSFORMERS TIME] GenerationMixin, generate run assisted decoding took {time9 - time8 :3f} seconds')
 
         elif generation_mode == GenerationMode.DOLA_GENERATION:
             if self._is_stateful:
@@ -2362,6 +2356,9 @@ class GenerationMixin:
                 max_length=generation_config.max_length,
             )
 
+            time8 = time.time()
+            logger.info(f'[TRANSFORMERS TIME] GenerationMixin, generate prepare beam search scorer took {time8 - time7 :3f} seconds')
+
             # 12. interleave input_ids with `num_beams` additional sequences per batch
             input_ids, model_kwargs = self._expand_inputs_for_generation(
                 input_ids=input_ids,
@@ -2369,6 +2366,9 @@ class GenerationMixin:
                 is_encoder_decoder=self.config.is_encoder_decoder,
                 **model_kwargs,
             )
+
+            time9 = time.time()
+            logger.info(f'[TRANSFORMERS TIME] GenerationMixin, generate interleave input_ids took {time9 - time8 :3f} seconds')
 
             # 13. run beam sample
             result = self._beam_search(
@@ -2380,6 +2380,9 @@ class GenerationMixin:
                 synced_gpus=synced_gpus,
                 **model_kwargs,
             )
+
+            time10 = time.time()
+            logger.info(f'[TRANSFORMERS TIME] GenerationMixin, generate run beam sample took {time10 - time9 :3f} seconds')
 
         elif generation_mode == GenerationMode.GROUP_BEAM_SEARCH:
             # 11. prepare beam search scorer
