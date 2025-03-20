@@ -113,6 +113,8 @@ if TYPE_CHECKING:
     from ..tokenization_utils_base import PreTrainedTokenizerBase
     from .streamers import BaseStreamer
 
+import time
+
 logger = logging.get_logger(__name__)
 
 if is_accelerate_available():
@@ -2065,10 +2067,14 @@ class GenerationMixin:
                     - [`~generation.GenerateBeamEncoderDecoderOutput`]
         """
 
+        time1 = time.time()
         # 1. Handle `generation_config` and kwargs that might update it, and validate the `.generate()` call
         self._validate_model_class()
         tokenizer = kwargs.pop("tokenizer", None)  # Pull this out first, we only use it for stopping criteria
         assistant_tokenizer = kwargs.pop("assistant_tokenizer", None)  # only used for assisted generation
+
+        time2 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] GenerationMixin, generate validate model class took {time2 - time1 :3f} seconds')
 
         generation_config, model_kwargs = self._prepare_generation_config(generation_config, **kwargs)
         self._validate_model_kwargs(model_kwargs.copy())
@@ -2084,6 +2090,9 @@ class GenerationMixin:
         accepts_attention_mask = "attention_mask" in set(inspect.signature(self.forward).parameters.keys())
         requires_attention_mask = "encoder_outputs" not in model_kwargs
         kwargs_has_attention_mask = model_kwargs.get("attention_mask", None) is not None
+
+        time3 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] GenerationMixin, generate set generation config took {time3 - time2 :3f} seconds')
 
         # 3. Define model inputs
         inputs_tensor, model_input_name, model_kwargs = self._prepare_model_inputs(
@@ -2108,6 +2117,9 @@ class GenerationMixin:
                     "A decoder-only architecture is being used, but right-padding was detected! For correct "
                     "generation results, please set `padding_side='left'` when initializing the tokenizer."
                 )
+        
+        time4 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] GenerationMixin, define model inputs took {time4 - time3 :3f} seconds')
 
         # 4. Define other model kwargs
         # decoder-only models with inputs_embeds forwarding must use caching (otherwise we can't detect whether we are
@@ -2148,6 +2160,9 @@ class GenerationMixin:
         if streamer is not None:
             streamer.put(input_ids.cpu())
 
+        time5 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] GenerationMixin, define kwargs & prepare input ids took {time5 - time4 :3f} seconds')
+
         # 6. Prepare `max_length` depending on other stopping criteria.
         input_ids_length = input_ids.shape[-1]
         has_default_max_length = kwargs.get("max_length") is None and generation_config.max_length is not None
@@ -2184,6 +2199,9 @@ class GenerationMixin:
             generation_config, model_kwargs, assistant_model, batch_size, max_cache_length, device
         )
 
+        time6 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] GenerationMixin, generate prepare cache took {time6 - time5 :3f} seconds')
+
         # 8. determine generation mode
         generation_mode = generation_config.get_generation_mode(assistant_model)
 
@@ -2202,6 +2220,9 @@ class GenerationMixin:
                 " running `.generate()`.",
                 UserWarning,
             )
+        
+        time7 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] GenerationMixin, generate get generation mode took {time7 - time6 :3f} seconds')
 
         # 9. prepare logits processors and stopping criteria
         prepared_logits_processor = self._get_logits_processor(
@@ -2222,6 +2243,7 @@ class GenerationMixin:
         # Set model_kwargs `use_cache` so we can use it later in forward runs
         model_kwargs["use_cache"] = generation_config.use_cache
 
+        logger.info(f'generation_mode: {generation_mode}')
         # 10. go into different generation modes
         if generation_mode == GenerationMode.ASSISTED_GENERATION:
             if generation_config.num_return_sequences > 1:
@@ -2254,6 +2276,9 @@ class GenerationMixin:
                 model_kwargs=model_kwargs,
             )
 
+            time8 = time.time()
+            logger.info(f'[TRANSFORMERS TIME] GenerationMixin, generate get candidate generator took {time8 - time7 :3f} seconds')
+
             # 12. run assisted generate
             result = self._assisted_decoding(
                 input_ids,
@@ -2265,6 +2290,10 @@ class GenerationMixin:
                 streamer=streamer,
                 **model_kwargs,
             )
+
+            time9 = time.time()
+            logger.info(f'[TRANSFORMERS TIME] GenerationMixin, generate run assisted decoding took {time9 - time8 :3f} seconds')
+
         elif generation_mode == GenerationMode.DOLA_GENERATION:
             if self._is_stateful:
                 # DoLa decoding was not designed for stateful models, and would require some changes

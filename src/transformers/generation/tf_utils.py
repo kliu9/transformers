@@ -49,7 +49,6 @@ from .tf_logits_process import (
     TFTopKLogitsWarper,
     TFTopPLogitsWarper,
 )
-import time
 
 logger = logging.get_logger(__name__)
 
@@ -710,13 +709,9 @@ class TFGenerationMixin:
                     - [`~generation.TFBeamSampleEncoderDecoderOutput`]
 
         """
-
-        time1 = time.time()
         # 1. Handle `generation_config` and kwargs that might update it, and validate the `.generate()` call
         self._validate_model_class()
-        time2 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] TFGenerationMixin, generate validate model class took {time2 - time1 :3f} seconds')
-
+        
         # priority: `generation_config` argument > `model.generation_config` (the default generation config)
         if generation_config is None:
             # legacy: users may modify the model configuration to control generation. To trigger this legacy behavior,
@@ -741,9 +736,6 @@ class TFGenerationMixin:
         model_kwargs = generation_config.update(**kwargs)  # All unused kwargs must be model kwargs
         self._validate_model_kwargs(model_kwargs.copy())
 
-        time3 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] TFGenerationMixin, generate get generation config took {time3 - time2 :3f} seconds')
-
         # 2. Cast input dtypes to tf.int32 unless they're floats (which happens for some image models)
         if inputs is not None:
             if isinstance(inputs, tf.Tensor) and inputs.dtype.is_floating:
@@ -767,9 +759,6 @@ class TFGenerationMixin:
             else:
                 model_kwargs["decoder_input_ids"] = tf.cast(model_kwargs["decoder_input_ids"], tf.int32)
 
-        time4 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] TFGenerationMixin, generate cast input dtypes took {time4 - time3 :3f} seconds')
-
         # 3. Set generation parameters if not already defined
         logits_processor = logits_processor if logits_processor is not None else TFLogitsProcessorList()
 
@@ -789,9 +778,6 @@ class TFGenerationMixin:
             raise ValueError(
                 "The selected model does not support Graph mode nor XLA generation (e.g. from tf.function())"
             )
-
-        time5 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] TFGenerationMixin, generate set parameters took {time5 - time4 :3f} seconds')
 
         # 4. Define model inputs
         inputs_tensor, model_input_name, model_kwargs = self._prepare_model_inputs(
@@ -813,9 +799,6 @@ class TFGenerationMixin:
                 inputs_tensor, generation_config.pad_token_id, generation_config.eos_token_id
             )
         
-        time6 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] TFGenerationMixin, generate define model inputs & prepare kwargs took {time6 - time5 :3f} seconds')
-
         # decoder-only models should use left-padding for generation
         if not self.config.is_encoder_decoder:
             if generation_config.pad_token_id is not None and tf.math.reduce_any(
@@ -843,9 +826,6 @@ class TFGenerationMixin:
         else:
             input_ids = inputs_tensor if model_input_name == "input_ids" else model_kwargs.pop("input_ids")
         
-        time7 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] TFGenerationMixin, generate prepare model inputs took {time7 - time6 :3f} seconds')
-
         # 7. Prepare `max_length` depending on other stopping criteria.
         input_ids_seq_length = shape_list(input_ids)[-1]
         has_default_max_length = kwargs.get("max_length") is None and generation_config.max_length is not None
@@ -911,9 +891,6 @@ class TFGenerationMixin:
             input_ids_seq_length=input_ids_seq_length,
             logits_processor=logits_processor,
         )
-
-        time8 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] TFGenerationMixin, generate determine generation mode took {time8 - time7 :3f} seconds')
 
         # 10. go into different generation modes
         if is_greedy_gen_mode:
