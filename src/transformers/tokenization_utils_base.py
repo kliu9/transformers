@@ -68,6 +68,7 @@ from .utils import (
 from .utils.chat_template_utils import _compile_jinja_template, _render_with_assistant_indices
 from .utils.import_utils import PROTOBUF_IMPORT_ERROR
 
+import time
 
 if TYPE_CHECKING:
     if is_torch_available():
@@ -1919,6 +1920,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
         # Otherwise use tokenizer.add_special_tokens({'unk_token': '<unk>'}) instead)
         assert tokenizer.unk_token == "<unk>"
         ```"""
+        time1 = time.time()
         resume_download = kwargs.pop("resume_download", None)
         proxies = kwargs.pop("proxies", None)
         use_auth_token = kwargs.pop("use_auth_token", None)
@@ -1950,6 +1952,9 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
         pretrained_model_name_or_path = str(pretrained_model_name_or_path)
         vocab_files = {}
         init_configuration = {}
+
+        time2 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedTokenizerBase from_pretrained argument finagling took {time2 - time1 :3f} seconds')
 
         is_local = os.path.isdir(pretrained_model_name_or_path)
         single_file_id = None
@@ -2010,6 +2015,9 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
                                 fast_tokenizer_file = get_fast_tokenizer_file(tokenizer_config["fast_tokenizer_files"])
                     vocab_files["tokenizer_file"] = fast_tokenizer_file
 
+        time3 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedTokenizerBase from_pretrained get cached tokenizer config took {time3 - time2 :3f} seconds')
+
         # Get files from url, cache, or disk depending on the case
         resolved_vocab_files = {}
         for file_id, file_path in vocab_files.items():
@@ -2039,6 +2047,9 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
                     _commit_hash=commit_hash,
                 )
                 commit_hash = extract_commit_hash(resolved_vocab_files[file_id], commit_hash)
+
+        time4 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedTokenizerBase from_pretrained get cached vocab files took {time4 - time3 :3f} seconds')
 
         # If one passes a GGUF file path to `gguf_file` there is no need for this check as the tokenizer will be
         # loaded directly from the GGUF file.
@@ -2088,6 +2099,7 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
         trust_remote_code=False,
         **kwargs,
     ):
+        time1 = time.time()
         # We instantiate fast tokenizers based on a slow tokenizer if we don't have access to the tokenizer.json
         # file or if `from_slow` is set to True.
         from_slow = kwargs.get("from_slow", False)
@@ -2128,6 +2140,9 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
         else:
             config_tokenizer_class = None
             init_kwargs = init_configuration
+
+        time2 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedTokenizerBase _from_pretrained prepare tokenizer init kwargs took {time2 - time1 :3f} seconds')
 
         # If an independent chat template file exists, it takes priority over template entries in the tokenizer config
         chat_template_file = resolved_vocab_files.pop("chat_template_file", None)
@@ -2190,6 +2205,9 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
                     )
                     if config_tokenizer_class is None:
                         config_tokenizer_class = config_tokenizer_class_fast
+        
+        time3 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedTokenizerBase _from_pretrained get cached config file took {time3 - time2 :3f} seconds')
 
         if config_tokenizer_class is not None:
             if cls.__name__.replace("Fast", "") != config_tokenizer_class.replace("Fast", ""):
@@ -2297,6 +2315,9 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
                 if key != "additional_special_tokens":
                     init_kwargs[key] = added_tokens_map.get(str(init_kwargs[key]), init_kwargs[key])
 
+        time4 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedTokenizerBase _from_pretrained add tokens and stuff took {time4 - time3 :3f} seconds')
+
         # Instantiate the tokenizer.
         try:
             tokenizer = cls(*init_inputs, **init_kwargs)
@@ -2318,6 +2339,9 @@ class PreTrainedTokenizerBase(SpecialTokensMixin, PushToHubMixin):
                 "Unable to load vocabulary from file. "
                 "Please check that the provided vocabulary is accessible and not corrupted."
             )
+
+        time5 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedTokenizerBase _from_pretrained instantiate tokenizer took {time5 - time4 :3f} seconds')
 
         if added_tokens_decoder != {} and max(list(added_tokens_decoder.keys())[-1], 0) > tokenizer.vocab_size:
             logger.info(
