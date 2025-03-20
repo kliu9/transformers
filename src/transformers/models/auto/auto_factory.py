@@ -482,6 +482,8 @@ class _BaseAutoModelClass:
 
         if token is not None:
             hub_kwargs["token"] = token
+        time2 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] in from_pretrained, configure kwargs {time2 - time1 :3f} seconds')
 
         if commit_hash is None:
             if not isinstance(config, PretrainedConfig):
@@ -497,6 +499,9 @@ class _BaseAutoModelClass:
                 commit_hash = extract_commit_hash(resolved_config_file, commit_hash)
             else:
                 commit_hash = getattr(config, "_commit_hash", None)
+
+        time3 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] in from_pretrained, get cached file {CONFIG_NAME} took {time3 - time2 :3f} seconds')
 
         if is_peft_available():
             if adapter_kwargs is None:
@@ -514,6 +519,9 @@ class _BaseAutoModelClass:
 
                     adapter_kwargs["_adapter_model_path"] = pretrained_model_name_or_path
                     pretrained_model_name_or_path = adapter_config["base_model_name_or_path"]
+        
+        time4 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] in from_pretrained, find adapter file took {time4 - time3 :3f} seconds')
 
         if not isinstance(config, PretrainedConfig):
             kwargs_orig = copy.deepcopy(kwargs)
@@ -541,6 +549,9 @@ class _BaseAutoModelClass:
             if kwargs_orig.get("quantization_config", None) is not None:
                 kwargs["quantization_config"] = kwargs_orig["quantization_config"]
 
+        time5 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] in from_pretrained, load config {pretrained_model_name_or_path} from pretrained took {time5 - time4 :3f} seconds')
+
         has_remote_code = hasattr(config, "auto_map") and cls.__name__ in config.auto_map
         has_local_code = type(config) in cls._model_mapping.keys()
         trust_remote_code = resolve_trust_remote_code(
@@ -550,6 +561,7 @@ class _BaseAutoModelClass:
         # Set the adapter kwargs
         kwargs["adapter_kwargs"] = adapter_kwargs
 
+        logger.info(f'has_remote_code: {has_remote_code} && trust_remote_code: {trust_remote_code}')
         if has_remote_code and trust_remote_code:
             class_ref = config.auto_map[cls.__name__]
             model_class = get_class_from_dynamic_module(
@@ -558,14 +570,20 @@ class _BaseAutoModelClass:
             _ = hub_kwargs.pop("code_revision", None)
             cls.register(config.__class__, model_class, exist_ok=True)
             model_class = add_generation_mixin_to_remote_model(model_class)
-            return model_class.from_pretrained(
+            res = model_class.from_pretrained(
                 pretrained_model_name_or_path, *model_args, config=config, **hub_kwargs, **kwargs
             )
+            time6 = time.time()
+            logger.info(f'[TRANSFORMERS TIME] in from_pretrained, remote stuffs case 1 took {time6 - time5 :3f} seconds')
+            return res
         elif type(config) in cls._model_mapping.keys():
             model_class = _get_model_class(config, cls._model_mapping)
-            return model_class.from_pretrained(
+            res = model_class.from_pretrained(
                 pretrained_model_name_or_path, *model_args, config=config, **hub_kwargs, **kwargs
             )
+            time6 = time.time()
+            logger.info(f'[TRANSFORMERS TIME] in from_pretrained, remote stuffs case 2 took {time6 - time5 :3f} seconds')
+            return res
         raise ValueError(
             f"Unrecognized configuration class {config.__class__} for this kind of AutoModel: {cls.__name__}.\n"
             f"Model type should be one of {', '.join(c.__name__ for c in cls._model_mapping.keys())}."

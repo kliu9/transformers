@@ -265,6 +265,8 @@ def infer_framework_load_model(
                 logger.info(f'[TRANSFORMERS TIME] import transformers within infer_framework_load_model {time3 - time2 :3f} seconds')
                 if look_pt:
                     _class = getattr(transformers_module, architecture, None)
+                    time4 = time.time()
+                    logger.info(f'[TRANSFORMERS TIME] got _class {_class} attribute from transformers_module in {time4 - time3 :3f} seconds')
                     if _class is not None:
                         classes.append(_class)
                 if look_tf:
@@ -272,8 +274,8 @@ def infer_framework_load_model(
                     if _class is not None:
                         classes.append(_class)
             class_tuple = class_tuple + tuple(classes)
-        time4 = time.time()
-        logger.info(f'[TRANSFORMERS TIME] total first if statement infer_framework_load_model {time4 - time1 :3f} seconds')
+        time5 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] total first if statement infer_framework_load_model {time5 - time1 :3f} seconds')
 
         if len(class_tuple) == 0:
             raise ValueError(f"Pipeline cannot infer suitable model classes from {model}")
@@ -293,13 +295,13 @@ def infer_framework_load_model(
                     "Model might be a PyTorch model (ending with `.bin`) but PyTorch is not available. "
                     "Trying to load the model with Tensorflow."
                 )
-
+            
             try:
                 model = model_class.from_pretrained(model, **kwargs)
                 if hasattr(model, "eval"):
                     model = model.eval()
-                time5 = time.time()
-                logger.info(f'[TRANSFORMERS TIME] load model {model_class} from pretrained {time5 - time4 :3f} seconds')
+                time6 = time.time()
+                logger.info(f'[TRANSFORMERS TIME] load model {model_class} from pretrained {time6 - time5 :3f} seconds')
                 # Stop loading on the first successful load.
                 break
             except (OSError, ValueError):
