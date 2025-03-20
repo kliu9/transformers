@@ -582,7 +582,7 @@ class _BaseAutoModelClass:
                 pretrained_model_name_or_path, *model_args, config=config, **hub_kwargs, **kwargs
             )
             time6 = time.time()
-            logger.info(f'[TRANSFORMERS TIME] in from_pretrained, remote stuffs case 2 took {time6 - time5 :3f} seconds')
+            logger.info(f'[TRANSFORMERS TIME] in from_pretrained, remote stuffs case 2 for {model_class} took {time6 - time5 :3f} seconds')
             return res
         raise ValueError(
             f"Unrecognized configuration class {config.__class__} for this kind of AutoModel: {cls.__name__}.\n"
