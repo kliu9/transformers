@@ -191,6 +191,7 @@ class Text2TextGenerationPipeline(Pipeline):
         return inputs
 
     def _forward(self, model_inputs, **generate_kwargs):
+        time1 = time.time()
         if self.framework == "pt":
             in_b, input_length = model_inputs["input_ids"].shape
         elif self.framework == "tf":
@@ -201,12 +202,18 @@ class Text2TextGenerationPipeline(Pipeline):
             generate_kwargs.get("min_length", self.generation_config.min_length),
             generate_kwargs.get("max_length", self.generation_config.max_length),
         )
+        time2 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] Text2TextGenerationPipeline, _forward check inputs took {time2 - time1 :3f} seconds')
 
         # User-defined `generation_config` passed to the pipeline call take precedence
         if "generation_config" not in generate_kwargs:
             generate_kwargs["generation_config"] = self.generation_config
 
         output_ids = self.model.generate(**model_inputs, **generate_kwargs)
+        
+        time3 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] Text2TextGenerationPipeline, _forward generate took {time3 - time2 :3f} seconds')
+
         out_b = output_ids.shape[0]
         if self.framework == "pt":
             output_ids = output_ids.reshape(in_b, out_b // in_b, *output_ids.shape[1:])
