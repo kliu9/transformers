@@ -118,6 +118,7 @@ from .utils.import_utils import (
 )
 from .utils.quantization_config import BitsAndBytesConfig, QuantizationMethod
 
+import time
 
 XLA_USE_BF16 = os.environ.get("XLA_USE_BF16", "0").upper()
 XLA_DOWNCAST_BF16 = os.environ.get("XLA_DOWNCAST_BF16", "0").upper()
@@ -4009,6 +4010,7 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
         Currently, it can't handle deepspeed ZeRO stage 3 and ignores loading errors
 
         """
+        time1 = time.time()
         state_dict = kwargs.pop("state_dict", None)
         from_tf = kwargs.pop("from_tf", False)
         from_flax = kwargs.pop("from_flax", False)
@@ -4114,6 +4116,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
         if gguf_file is not None and not is_accelerate_available():
             raise ValueError("accelerate is required when loading a GGUF file `pip install accelerate`.")
 
+        time2 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, process args took {time2 - time1 :3f} seconds')
+
         if commit_hash is None:
             if not isinstance(config, PretrainedConfig):
                 # We make a call to the config file first (which may be absent) to get the commit hash as soon as possible
@@ -4135,6 +4140,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
             else:
                 commit_hash = getattr(config, "_commit_hash", None)
 
+        time3 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, getting cached file {CONFIG_NAME} took {time3 - time2 :3f} seconds')
+
         if is_peft_available():
             _adapter_model_path = adapter_kwargs.pop("_adapter_model_path", None)
 
@@ -4154,6 +4162,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
                     pretrained_model_name_or_path = json.load(f)["base_model_name_or_path"]
         else:
             _adapter_model_path = None
+
+        time3 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, find adapter file took {time3 - time2 :3f} seconds')
 
         # change device_map into a map if we passed an int, a str or a torch.device
         if isinstance(device_map, torch.device):
@@ -4219,6 +4230,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
             logger.info("Offline mode: forcing local_files_only=True")
             local_files_only = True
 
+        time4 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, other processing stuff {time4 - time3 :3f} seconds')
+
         # Load config if we don't provide a configuration
         if not isinstance(config, PretrainedConfig):
             config_path = config if config is not None else pretrained_model_name_or_path
@@ -4254,6 +4268,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
                 config._attn_implementation = kwarg_attn_imp
 
             model_kwargs = kwargs
+        
+        time5 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, load config from pretrained {time5 - time4 :3f} seconds')
 
         pre_quantized = hasattr(config, "quantization_config")
         if pre_quantized and not AutoHfQuantizer.supports_quant_method(config.quantization_config):
@@ -4300,6 +4317,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
                 "You cannot combine Quantization and loading a model from a GGUF file, try again by making sure you did not passed a `quantization_config` or that you did not load a quantized model from the Hub."
             )
 
+        time6 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, quantization stuff took {time6 - time5 :3f} seconds')
+
         checkpoint_files, sharded_metadata = _get_resolved_checkpoint_files(
             pretrained_model_name_or_path=pretrained_model_name_or_path,
             subfolder=subfolder,
@@ -4317,6 +4337,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
             revision=revision,
             commit_hash=commit_hash,
         )
+
+        time7 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, get resolved checkpoint files took {time7 - time6 :3f} seconds')
 
         is_sharded = sharded_metadata is not None
         is_quantized = hf_quantizer is not None
@@ -4373,8 +4396,14 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
 
         config.name_or_path = pretrained_model_name_or_path
 
+        time8 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, gguf stuff took {time8 - time7 :3f} seconds')
+
         # Instantiate model.
         model_init_context = cls.get_init_context(_fast_init, is_quantized, _is_ds_init_called, low_cpu_mem_usage)
+
+        time9 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, model instantiation took {time9 - time8 :3f} seconds')
 
         config = copy.deepcopy(config)  # We do not want to modify the config inplace in from_pretrained.
         if not getattr(config, "_attn_implementation_autoset", False):
@@ -4421,6 +4450,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
                 model, device_map, max_memory, hf_quantizer, torch_dtype, keep_in_fp32_modules
             )
 
+        time10 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, a few more steps took {time10 - time9 :3f} seconds')
+
         # Finalize model weight initialization
         if from_tf:
             model, loading_info = cls._load_from_tf(model, config, checkpoint_files)
@@ -4458,6 +4490,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
                 _fast_init=_fast_init,
             )
 
+        time11 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, actually loading pretrained model took {time11 - time10 :3f} seconds')
+
         # make sure token embedding weights are still tied if needed
         model.tie_weights()
 
@@ -4488,6 +4523,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
                     "Generation config file not found, using a generation config created from the model config."
                 )
                 pass
+            
+        time12 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, getting generation config from pretrained took {time12 - time11 :3f} seconds')
 
         # Dispatch model with hooks on all devices if necessary (not needed with a tp_plan, so we skip it as it slightly
         # harm performances)
@@ -4529,6 +4567,9 @@ class PreTrainedModel(nn.Module, ModuleUtilsMixin, GenerationMixin, PushToHubMix
                 token=token,
                 adapter_kwargs=adapter_kwargs,
             )
+
+        time13 = time.time()
+        logger.info(f'[TRANSFORMERS TIME] PreTrainedModel from_pretrained, the rest took {time13 - time12 :3f} seconds')
 
         if output_loading_info:
             if from_pt:

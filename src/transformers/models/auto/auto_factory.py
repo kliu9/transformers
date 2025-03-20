@@ -561,7 +561,6 @@ class _BaseAutoModelClass:
         # Set the adapter kwargs
         kwargs["adapter_kwargs"] = adapter_kwargs
 
-        logger.info(f'has_remote_code: {has_remote_code} && trust_remote_code: {trust_remote_code}')
         if has_remote_code and trust_remote_code:
             class_ref = config.auto_map[cls.__name__]
             model_class = get_class_from_dynamic_module(
@@ -577,12 +576,15 @@ class _BaseAutoModelClass:
             logger.info(f'[TRANSFORMERS TIME] in from_pretrained, remote stuffs case 1 took {time6 - time5 :3f} seconds')
             return res
         elif type(config) in cls._model_mapping.keys():
+            logger.info(f'model mapping: {cls._model_mapping}')
             model_class = _get_model_class(config, cls._model_mapping)
+            time6 = time.time()
+            logger.info(f'[TRANSFORMERS TIME] in from_pretrained, get model_class {model_class} took {time6 - time5 :3f} seconds')
             res = model_class.from_pretrained(
                 pretrained_model_name_or_path, *model_args, config=config, **hub_kwargs, **kwargs
             )
-            time6 = time.time()
-            logger.info(f'[TRANSFORMERS TIME] in from_pretrained, remote stuffs case 2 for {model_class} took {time6 - time5 :3f} seconds')
+            time7 = time.time()
+            logger.info(f'[TRANSFORMERS TIME] in from_pretrained, loading {model_class} from pretrained took {time7 - time6 :3f} seconds')
             return res
         raise ValueError(
             f"Unrecognized configuration class {config.__class__} for this kind of AutoModel: {cls.__name__}.\n"
