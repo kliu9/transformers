@@ -904,6 +904,7 @@ def _get_resolved_checkpoint_files(
     """
     is_sharded = False
 
+    logger.info(f'resolving checkpoint files for pretrained model name or path {pretrained_model_name_or_path} & subfolder {subfolder}')
     if pretrained_model_name_or_path is not None and gguf_file is None:
         pretrained_model_name_or_path = str(pretrained_model_name_or_path)
         is_local = os.path.isdir(pretrained_model_name_or_path)
